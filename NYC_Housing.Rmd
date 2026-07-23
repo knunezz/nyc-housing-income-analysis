@@ -2,7 +2,6 @@
 title: "NYC Housing"
 author:
 - Kaitlyn Nunez
-- knunez
 date: "Due Wed, March 11, at 11:59PM"
 output:
   pdf_document:
@@ -42,25 +41,10 @@ library("leaps")
 
 ```{r, echo=FALSE}
 
-# TO BEGIN:
-# 
-# 1) Read the "project1-instructions" on 
-#    Canvas->Files->project-materials->project1-materials:
-# https://canvas.cmu.edu/files/14097492/download?download_frd=1
-# 
-# 2) Load the packages by running the previous chunk.
-#
-# 3) To load the possible datasets, run the following:
-
 bikes <- readr::read_csv("bikes.csv")
 court <- readr::read_csv("court.csv")
 nyc <- readr::read_csv("nyc.csv")
 social <- readr::read_csv("social.csv")
-
-# 4) Read the corresponding data descriptions
-#    in the "data-story-prompts" folder on: 
-#    Canvas->files->project-materials->project1-materials:
-# https://canvas.cmu.edu/courses/51472/files/folder/project-materials/project1(dueWed-Mar11)/data-story-prompts
 
 ```
 \vspace{84pt}
