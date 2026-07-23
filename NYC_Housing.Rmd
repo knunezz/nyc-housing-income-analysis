@@ -1,0 +1,243 @@
+---
+title: "NYC Housing"
+author:
+- Kaitlyn Nunez
+- knunez
+date: "Due Wed, March 11, at 11:59PM"
+output:
+  pdf_document:
+    toc: yes
+  word_document:
+    toc: yes
+  html_document:
+    code_folding: show
+    theme: cosmo
+    toc: yes
+    toc_float: yes
+optin: TRUE
+---
+
+```{r, include=FALSE}
+###########################
+# STYLE EDITS: IGNORE THIS
+###########################
+knitr::opts_chunk$set(message = FALSE) # include this if you don't want markdown to knit messages
+knitr::opts_chunk$set(warning = FALSE) # include this if you don't want markdown to knit warnings
+knitr::opts_chunk$set(echo = TRUE) # set echo=FALSE to hide code from html output
+```
+
+
+```{r, echo=FALSE}
+
+library("knitr")
+library("kableExtra")
+library("pander")
+library("readr")
+library("magrittr")
+library("car")
+library("interactions")
+library("leaps")
+
+```
+
+```{r, echo=FALSE}
+
+# TO BEGIN:
+# 
+# 1) Read the "project1-instructions" on 
+#    Canvas->Files->project-materials->project1-materials:
+# https://canvas.cmu.edu/files/14097492/download?download_frd=1
+# 
+# 2) Load the packages by running the previous chunk.
+#
+# 3) To load the possible datasets, run the following:
+
+bikes <- readr::read_csv("bikes.csv")
+court <- readr::read_csv("court.csv")
+nyc <- readr::read_csv("nyc.csv")
+social <- readr::read_csv("social.csv")
+
+# 4) Read the corresponding data descriptions
+#    in the "data-story-prompts" folder on: 
+#    Canvas->files->project-materials->project1-materials:
+# https://canvas.cmu.edu/courses/51472/files/folder/project-materials/project1(dueWed-Mar11)/data-story-prompts
+
+```
+\vspace{84pt}
+# Introduction
+
+New York City is one of the largest economic and cultural centers in the United States, but it is also known for its very high cost of living, especially in housing. Because housing costs are so high, household income plays an important role in shaping living conditions in the city. In this report, we examine household income in New York City and investigate whether certain factors are associated with differences in income levels. Specifically, we analyze whether a respondent’s age, the number of maintenance deficiencies in their residence, and the year they moved to New York City help explain variation in household income.
+
+# Exploratory Data Analysis
+
+**Data**
+
+In this dataset, we analyze a sample of households from the New York City Housing and Vacancy Survey. To better understand differences in household income, we examine how income is related to three explanatory variables: the respondent’s age, the number of maintenance deficiencies in the residence, and the year the respondent moved to New York City. The variables are summarized as follows:
+
+Income: Total household income (in dollars)
+
+Age: Age of the respondent (in years)
+
+MaintenanceDef: Number of maintenance deficiencies in the residence between 2002 and 2005
+
+NYCMove: Year the respondent moved to New York City
+
+```{r, echo=FALSE}
+head(nyc)
+```
+\vspace{12pt}
+**Univariate Exploration**
+
+As a first step in the analysis, we explore each variable individually. We use histograms to explore the distribution of the quantitative variables.
+
+..
+\vspace{36pt}
+```{r, echo=FALSE}
+hist(nyc$Income,
+main="Household Income",
+xlab="Income ($)",
+ylab="Frequency")
+```
+..
+\vspace{12pt}
+
+```{r, echo=FALSE}
+hist(nyc$Age,
+main="Respondent Age",
+xlab="Age (years)",
+ylab="Frequency")
+```
+..
+\newpage
+```{r, echo=FALSE}
+hist(nyc$MaintenanceDef,
+main="Maintenance Deficiencies",
+xlab="Number of Deficiencies",
+ylab="Frequency")
+```
+..
+\vspace{12pt}
+```{r, echo=FALSE}
+hist(nyc$NYCMove,
+main="Year Respondent Moved to NYC",
+xlab="Year",
+ylab="Frequency")
+```
+..
+\newpage
+For Income:
+```{r, echo=FALSE}
+summary(nyc$Income)
+```
+For Age:
+```{r, echo=FALSE}
+summary(nyc$Age)
+```
+For MaintenanceDef:
+```{r, echo=FALSE}
+summary(nyc$MaintenanceDef)
+```
+For NYCMove:
+```{r, echo=FALSE}
+summary(nyc$NYCMove)
+```
+\vspace{24pt}
+Based on the graphs and numerical summaries, several patterns emerge. Household income (dollars) ranges from 1440 to 98000, with a median of 39000 and a mean of about 42266, indicating a slightly right-skewed distribution. Respondents ages range from 26 to 85 years, with a median of 49 and a mean of approximately 50, suggesting most respondents are middle-aged. The number of maintenance deficiencies varies from 0 to 8, with a median of 2 and an average of about 1.98, showing that most residences have relatively few issues. Lastly, the year respondents moved to New York City spans 1942 to 2004, with a median of 1985, implying that many have lived in the city for several decades.
+
+\vspace{12pt}
+**Bivariate Exploration**
+
+Now that we understand the distribution of the individual variables, we explore how each predictor is associated with the response variable, Income.
+
+```{r, echo=FALSE}
+plot(nyc$Age, nyc$Income,
+main="Income vs Age",
+xlab="Age",
+ylab="Income ($)")
+```
+\vspace{12pt}
+```{r, echo=FALSE}
+plot(nyc$MaintenanceDef, nyc$Income,
+main="Income vs Maintenance Deficiencies",
+xlab="Maintenance Deficiencies",
+ylab="Income ($)")
+```
+
+```{r, echo=FALSE}
+plot(nyc$NYCMove, nyc$Income,
+main="Income vs Year Moved to NYC",
+xlab="Year Moved",
+ylab="Income ($)")
+```
+\vspace{24pt}
+
+Looking at the scatterplots, we can get an idea of how each predictor relates to household income. Age seems to have a small positive effect on income, meaning that income tends to go up a bit as people get older, though the relationship isn’t very strong. Maintenance deficiencies seem to have a slight negative effect, so households with more problems might have a bit lower income. The year someone moved to New York City doesn’t show a clear pattern with income, but there might be a small trend where more recent movers differ from people who’ve lived there longer. Overall, these relationships aren’t very strong, but they’re still worth exploring more with a regression model.
+
+# Modeling
+
+After looking at how our variables relate to each other, we move on to building a linear regression model to predict household income. First, we check the histogram of Income and see that it’s a bit right-skewed. This suggests that taking the log of Income might help make the model work better, so we decide to model log(Income) instead.
+
+From our earlier scatterplots, it looks like Age, MaintenanceDef, and NYCMove all have at least some connection to income, so we include all three in the model. Before we fit the regression, we also check for multicollinearity by looking at a pairs plot to see how the predictors relate to each other.
+
+
+\vspace{36pt}
+```{r, echo=FALSE}
+nycFixed <-lm(log(Income) ~ Age + MaintenanceDef + NYCMove, data = nyc)
+pairs(nyc[,c("Income","Age","MaintenanceDef","NYCMove")])
+```
+\vspace{12pt}
+
+
+Looking at the pairs plot, we check how the predictors relate to each other to see if multicollinearity might be an issue. The scatterplots don’t show any really strong relationships, so it doesn’t look like multicollinearity is a big problem. To be sure, we calculate the variance inflation factors (VIFs) for the predictors in our model predicting log(Income).
+
+```{r, echo=FALSE}
+car::vif(nycFixed)
+```
+
+All the VIF values are under 2.5, which means multicollinearity isn’t really a problem, so we can keep all the predictors in the model.
+
+Next we check if the regression assumptions are reasonably met using diagnostic plots. We look at the residuals vs. fitted plot to see if the variance is roughly constant and errors are independent, and we use the normal Q-Q plot to see if the residuals are roughly normally distributed.
+
+
+```{r, echo=FALSE}
+plot(nycFixed, which = 1)
+```
+\vspace{12pt}
+
+In the Residuals vs. Fitted plot, the residuals are dispersed around zero with no obvious pattern. The smoothing line exhibits only minor curve. This indicates that the assumption of constant variance is reasonably met and that the model errors are approximately centered around zero.
+\vspace{12pt}
+
+```{r, echo=FALSE}
+qqnorm(nycFixed$residuals)
+qqline(nycFixed$residuals)
+```
+\vspace{12pt}
+In the Q–Q plot, most of the residuals follow the reference line fairly closely, indicating that the residuals are approximately normally distributed. There is a slight upward curve at the top of the plot, suggesting a minor deviation from normality in the upper tail, but overall the normality assumption appears reasonably satisfied.
+
+With the prior remarks and analysis in mind, the regression summary for our fitted model is shown below.
+
+```{r, echo=FALSE}
+summary(nycFixed)
+```
+We think this model, which uses the log of Income, is a reasonable way to predict household income because the quantitative predictors show roughly linear relationships with income in our exploratory analysis. The model overall is statistically significant, with an F-test p-value of 0.0004855.
+
+Looking at the coefficients, MaintenanceDef has a negative and statistically significant effect (p = 0.000251), which means that households with more maintenance problems tend to have lower income. Since we used the log of Income, this can be interpreted roughly as a percentage which is if a household has one more maintenance problem than another household, and their Age and NYCMove are the same, their income is predicted to be roughly 10.6% lower. Age and NYCMove are not statistically significant, so they don’t show a strong relationship with income in this model.
+
+All of the VIFs are below 2.5, so multicollinearity isn’t an issue. Even though the model only explains a small part of the variation in income (R^2 is approximately 0.058), the diagnostic plots show that the assumptions for the regression are reasonably satisfied. Overall, this model gives a simple way to look at how maintenance deficiencies and other housing factors are related to income.
+
+
+# Prediction
+
+Now that we have a model that reasonably satisfies the regression assumptions, we are interested in predicting income for a household with specific characteristics. Suppose we consider a household with Age = 77, MaintenanceDef = 1, and NYCMove = 1981.
+
+The predicted value of log(Income) is computed as follows:
+```{r}
+13.200395265 - 0.001380673*77 - 0.106256713*1 - 0.001249257*1981
+```
+The predicted value of log(Income) for a household with these characteristics is 10.51305.
+
+# Discussion
+
+In this analysis, we looked at how income is related to age, maintenance problems in a household, and the year someone moved to New York City. From our regression results, it looks like maintenance deficiencies have a significant effect on income, while age and the year moved don’t seem to make much of a difference in this model. We also checked for multicollinearity using VIFs, and since all the values were below 2.5, there isn't a problem. The residual plots also showed that the regression assumptions are reasonably okay. Even though the model is statistically significant, the R^2 value is pretty small, which suggests that other factors, like education, job type, or household characteristics, might also be important.
+
+Overall, this analysis gives a basic look at how housing conditions, like maintenance issues, might be connected to income. Adding more variables and more detailed data in future studies could help us understand income differences in New York City better.
